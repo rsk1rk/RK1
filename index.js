@@ -305,7 +305,7 @@ if (command === '!pdf_plan') {
                 }
         
             } catch (err) {
-                console.error("Message Handler Error:", err);
+                msg.reply("Error Details: " + err.message);
                 // Ensure session reset to avoid loops
                 delete geminiChatSessions[userId];
             }
