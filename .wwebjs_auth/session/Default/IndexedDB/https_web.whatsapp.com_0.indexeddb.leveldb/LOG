@@ -1,0 +1,34 @@
+2025/11/22-16:06:32.408 46b4 Reusing MANIFEST C:\Users\SAHIL\Desktop\TRAVEL bot\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/11/22-16:06:32.409 46b4 Recovering log #89
+2025/11/22-16:06:32.442 46b4 Reusing old log C:\Users\SAHIL\Desktop\TRAVEL bot\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000089.log 
+2025/11/22-16:06:33.665 3218 Level-0 table #97: started
+2025/11/22-16:06:33.673 3218 Level-0 table #97: 237973 bytes OK
+2025/11/22-16:06:33.675 3218 Delete type=0 #89
+2025/11/22-16:06:33.677 3218 Manual compaction at level-0 from '\x00\x1a\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x1b\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/11/22-16:06:38.462 46b4 Compacting 1@1 + 4@2 files
+2025/11/22-16:06:38.538 46b4 Generated table #98@1: 25540 keys, 2160320 bytes
+2025/11/22-16:06:38.660 46b4 Generated table #99@1: 45525 keys, 2175522 bytes
+2025/11/22-16:06:38.819 46b4 Generated table #100@1: 92374 keys, 2241918 bytes
+2025/11/22-16:06:38.893 46b4 Generated table #101@1: 61963 keys, 1502911 bytes
+2025/11/22-16:06:38.893 46b4 Compacted 1@1 + 4@2 files => 8080671 bytes
+2025/11/22-16:06:38.894 46b4 compacted to: files[ 0 0 4 0 0 0 0 ]
+2025/11/22-16:06:38.894 46b4 Delete type=2 #91
+2025/11/22-16:06:38.894 46b4 Delete type=2 #92
+2025/11/22-16:06:38.894 46b4 Delete type=2 #93
+2025/11/22-16:06:38.894 46b4 Delete type=2 #94
+2025/11/22-16:06:38.894 46b4 Delete type=2 #97
+2025/11/22-16:23:03.023 46b4 Level-0 table #103: started
+2025/11/22-16:23:03.042 46b4 Level-0 table #103: 1414845 bytes OK
+2025/11/22-16:23:03.044 46b4 Delete type=0 #96
+2025/11/22-16:23:14.613 46b4 Compacting 1@1 + 4@2 files
+2025/11/22-16:23:14.668 46b4 Generated table #104@1: 31567 keys, 2172289 bytes
+2025/11/22-16:23:14.708 46b4 Generated table #105@1: 30824 keys, 2154820 bytes
+2025/11/22-16:23:14.788 46b4 Generated table #106@1: 92601 keys, 2241915 bytes
+2025/11/22-16:23:14.861 46b4 Generated table #107@1: 82081 keys, 1988639 bytes
+2025/11/22-16:23:14.861 46b4 Compacted 1@1 + 4@2 files => 8557663 bytes
+2025/11/22-16:23:14.862 46b4 compacted to: files[ 0 0 4 0 0 0 0 ]
+2025/11/22-16:23:14.862 46b4 Delete type=2 #98
+2025/11/22-16:23:14.862 46b4 Delete type=2 #99
+2025/11/22-16:23:14.862 46b4 Delete type=2 #100
+2025/11/22-16:23:14.862 46b4 Delete type=2 #101
+2025/11/22-16:23:14.862 46b4 Delete type=2 #103

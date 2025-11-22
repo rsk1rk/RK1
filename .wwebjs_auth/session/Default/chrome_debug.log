@@ -1,0 +1,37 @@
+[1122/160555.686:INFO:CONSOLE(113)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v4/yX/r/jwgCbP24pRn.js (113)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Feature xr-spatial-tracking's parameters are ignored.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Origin trial controlled feature not enabled: 'attribution-reporting'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'compute-pressure'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Origin trial controlled feature not enabled: 'interest-cohort'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'private-state-token-issuance'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Origin trial controlled feature not enabled: 'shared-storage'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'shared-storage-select-url'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'private-state-token-redemption'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'unload'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'window-management'.", source:  (0)
+[1122/160559.663:INFO:CONSOLE(0)] "Document-Policy HTTP header: Unrecognized document policy feature name include-js-call-stacks-in-crash-reports.", source: https://web.whatsapp.com/ (0)
+[1122/160632.697:INFO:CONSOLE(113)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v4/yX/r/jwgCbP24pRn.js (113)
+[1122/160648.547:INFO:CONSOLE(113)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v4/yM/r/mOJ5vHcxGjI.js (113)
+[1122/160751.464:INFO:CONSOLE(113)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v4/yM/r/mOJ5vHcxGjI.js (113)
+[1122/160830.645:INFO:CONSOLE(113)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v4/yM/r/mOJ5vHcxGjI.js (113)
+[1122/161038.815:INFO:CONSOLE(113)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v4/yM/r/mOJ5vHcxGjI.js (113)
+[1122/162535.779:WARNING:dns_config_service_win.cc(584)] Failed to read DnsConfig.
+[1122/162537.217:INFO:CONSOLE(113)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v4/yM/r/mOJ5vHcxGjI.js (113)
+[1122/162540.795:WARNING:dns_config_service_win.cc(584)] Failed to read DnsConfig.
+[1122/162550.815:WARNING:dns_config_service_win.cc(584)] Failed to read DnsConfig.
+[1122/162556.413:WARNING:dns_config_service_win.cc(584)] Failed to read DnsConfig.
+[1122/162556.424:ERROR:cache_util_win.cc(20)] Unable to move the cache: Access is denied. (0x5)
+[1122/162556.424:ERROR:disk_cache.cc(205)] Unable to create cache
+[1122/162556.424:ERROR:gpu_disk_cache.cc(673)] Gpu Cache Creation failed: -2
+[1122/162556.424:ERROR:cache_util_win.cc(20)] Unable to move the cache: Access is denied. (0x5)
+[1122/162556.424:ERROR:disk_cache.cc(205)] Unable to create cache
+[1122/162556.424:ERROR:gpu_disk_cache.cc(673)] Gpu Cache Creation failed: -2
+[1122/162558.438:ERROR:cache_util_win.cc(20)] Unable to move the cache: Access is denied. (0x5)
+[1122/162558.438:ERROR:disk_cache.cc(205)] Unable to create cache
+[1122/162558.444:ERROR:cache_util_win.cc(20)] Unable to move the cache: Access is denied. (0x5)
+[1122/162558.444:ERROR:cache_util_win.cc(20)] Unable to move the cache: Access is denied. (0x5)
+[1122/162558.444:ERROR:disk_cache.cc(205)] Unable to create cache
+[1122/162558.444:ERROR:gpu_disk_cache.cc(673)] Gpu Cache Creation failed: -2
+[1122/162558.444:ERROR:disk_cache.cc(205)] Unable to create cache
+[1122/162558.444:ERROR:gpu_disk_cache.cc(673)] Gpu Cache Creation failed: -2
+[1122/162610.834:WARNING:dns_config_service_win.cc(584)] Failed to read DnsConfig.
