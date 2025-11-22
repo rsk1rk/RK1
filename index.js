@@ -72,7 +72,8 @@ client.on('message', async msg => {
     const command = userMessage.toLowerCase().split(' ')[0];
 
     // FIX: क्रॅश होण्यापासून वाचवण्यासाठी Try-Catch Shield
-    try {
+   
+     try {
         if (msg.isStatus || userMessage === '') return; 
 
         // UX सुधारणा: 'टायपिंग' स्टेटस फंक्शन काढले (Deprecation Fix)
@@ -247,32 +248,68 @@ if (command === '!pdf_plan') {
              return;
         }
 
-        // 6.6. Gemini Chat Session (संभाषणाचा संदर्भ ठेवते)
+        // 6.6. Gemini Chat Session (संभाषणाचा संदर्भ आणि स्मार्ट फीचर्स)
         
+        // 1. आजची तारीख आणि वार (Dynamic Date)
+        const today = new Date().toLocaleString("en-IN", { 
+            timeZone: "Asia/Kolkata", 
+            dateStyle: "full", 
+            timeStyle: "short" 
+        });
+
+        // 2. नवीन स्मार्ट नियम (No API - Google Links)
+        const smartRules = `
+        --- LIVE DATA CONTEXT ---
+        Current Date & Time in India: ${today}.
+        IMPORTANT: 
+        - Always answer knowing that today is ${today}.
+        - If checking for trains/flights, use this Day/Date to assume availability based on standard schedules.
+        
+        --- SMART LINKS (NO API MODE) ---
+        Since you don't have live API access for Real-time Tracking or Exact Prices:
+        1. If User asks for "Live Status", "Where is my train", or "PNR":
+           Generate this Google Link: [🔴 Check Live Status Here](https://www.google.com/search?q=train+live+status+${encodeURIComponent(userMessage)})
+        
+        2. If User asks for "Flight Price" or "Ticket Booking":
+           Generate this Link: [✈ Check Prices on Google](https://www.google.com/search?q=flight+ticket+booking+${encodeURIComponent(userMessage)})
+           
+        3. For everything else, use your standard "Travel Agent" knowledge defined in system instructions.
+        -------------------------
+        User Query: 
+        `;
+
+        // 3. चॅट सेशन सुरू करा (जर नसेल तर)
         if (!geminiChatSessions[userId]) {
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: systemInstruction });
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-1.5-flash", // मॉडेलचे नाव
+                systemInstruction: systemInstruction // तुमचे जुने फीचर्स (Section 4 मधून) इथे आपोआप लोड होतील
+            });
             geminiChatSessions[userId] = model.startChat();
         }
         
-        try {
-            const chat = geminiChatSessions[userId];
-            // FIX: request is not iterable (sendMessage ला फक्त raw string हवा)
-            const result = await chat.sendMessage(userMessage); 
-            msg.reply(result.response.text());
-
-        } catch (error) {
-            console.error("Chat Session Error:", error);
-            msg.reply("संभाषणात अडचण येत आहे. कृपया !new_chat टाइप करून नवीन सेशन सुरू करा.");
-        }
-
-    } catch (e) {
-        // Critical Runtime Error (ज्यामुळे बॉट पूर्णपणे क्रॅश होण्यापासून वाचतो)
-        console.error("Critical Runtime Error:", e.message);
-        if (!msg.isStatus) { 
-             msg.reply("माफ करा, बॉटला मेसेज प्रोसेस करताना गंभीर त्रुटी आली. कृपया ' !new_chat ' वापरून पुन्हा प्रयत्न करा."); 
-        }
-    }
-});
-
-// बॉट सुरू करा
-client.initialize();
+                try {
+                    const chat = geminiChatSessions[userId];
+                    
+                    // 4. सँडविच तयार करा: (स्मार्ट नियम + युजरचा मेसेज)
+                    const finalMessage = smartRules + userMessage;
+        
+                    const result = await chat.sendMessage(finalMessage); 
+                    // Safely handle different SDK response shapes
+                    msg.reply(result?.response?.text ? result.response.text() : (result?.text || JSON.stringify(result)));
+        
+                } catch (error) {
+                    console.error("Chat Session Error:", error);
+                    // जुने सेशन डिलीट करा म्हणजे एरर लूपमध्ये अडकणार नाही
+                    delete geminiChatSessions[userId];
+                    msg.reply("संभाषणात थोडी अडचण आली. कृपया पुन्हा प्रयत्न करा.");
+                }
+        
+            } catch (err) {
+                console.error("Message Handler Error:", err);
+                // Ensure session reset to avoid loops
+                delete geminiChatSessions[userId];
+            }
+        }); 
+        
+        // स्टार्ट करा: WhatsApp क्लायंट इनिशियलाइझ करा
+        client.initialize();
