@@ -281,7 +281,7 @@ if (command === '!pdf_plan') {
         // 3. चॅट सेशन सुरू करा (जर नसेल तर)
         if (!geminiChatSessions[userId]) {
             const model = genAI.getGenerativeModel({ 
-                model: "gemini-1.5-flash", // मॉडेलचे नाव
+                model: "gemini-2.5-flash", // मॉडेलचे नाव
                 systemInstruction: systemInstruction // तुमचे जुने फीचर्स (Section 4 मधून) इथे आपोआप लोड होतील
             });
             geminiChatSessions[userId] = model.startChat();
