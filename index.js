@@ -1,315 +1,184 @@
 // ==========================================================
-// 1. आवश्यक लायब्ररी इंपोर्ट आणि सेटअप (Advanced)
+// YATRA BOT - FINAL MERGED VERSION
+// (Old Features: PDF, Weather, Photo) + (New Features: Smart Links, Timetable)
 // ==========================================================
-require('dotenv').config(); // FIX: .env फाईल लोड करण्यासाठी
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js'); // MessageMedia जोडले
+
+require('dotenv').config();
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const axios = require('axios'); // Weather आणि Photo API साठी
+const axios = require('axios'); // Weather आणि Photo साठी
 const qrcode = require('qrcode-terminal');
-const fs = require('fs'); // Itinerary saving साठी
-// A. PDF तयार करण्यासाठी
+const fs = require('fs');
 const PDFDocument = require('pdfkit'); 
-// B. फाईल सिस्टीम व्यवस्थापित करण्यासाठी (फाइल वाचणे/डिलीट करणे)
-// C. MessageMedia आधीच import केलेले आहे.
-// 2. क्लायंट आणि API सेटअप
-// --- 24 तास चालू ठेवण्यासाठी डमी सर्व्हर (START) ---
 const express = require('express');
+
+// --- 1. SERVER SETUP (Render Uptime) ---
 const app = express();
 const port = process.env.PORT || 3000;
+app.get('/', (req, res) => res.send("YatraBot is Live with ALL Features!"));
+app.listen(port, () => console.log(`Server running on port ${port}`));
 
-app.get('/', (req, res) => {
-    res.send("I am Alive! WhatsApp Bot is running.");
-});
-
-app.listen(port, () => {
-    console.log(`Server is listening on port ${port}`);
-});
-// --- 24 तास चालू ठेवण्यासाठी डमी सर्व्हर (END) ---
+// --- 2. SETUP CLIENT & AI ---
 const client = new Client({ 
-    authStrategy: new LocalAuth() 
+    authStrategy: new LocalAuth(),
+    puppeteer: { args: ['--no-sandbox'] }
 });
 
-// FIX: API Key hardcode न करता .env मधून लोड करा
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY); 
+const geminiChatSessions = {};          
 
-// 3. स्टेट आणि संभाषण (Chat) स्टोरेज
-const userStates = {};          
-const geminiChatSessions = {};  
-
-// 4. एडवांस Gemini सिस्टीम इन्स्ट्रक्शन्स (तुमच्या मागणीनुसार मल्टी-लँग्वेज)
-const systemInstruction = `
-You are YatraBot, an expert, polite, and resourceful Global Travel Guide.
-User is asking for travel information.
-
-Instructions:
-1. Provide detailed travel information including Flights, Trains, and Buses options with estimated ticket prices.
-2. If the user asks for a destination, suggest local transport like Rickshaw, Taxi, or Metro.
-3. Give step-by-step navigation advice.
-4. Suggest tourist places if asked.
-5. *The response MUST be in the SAME language as the user's query.* For example, if the user asks in Marathi, answer in Marathi.
-6. Keep the tone helpful and polite.
-7. If the query is not about travel, politely decline in the user's query language.
-`;
-
-// 5. WhatsApp क्लायंट इव्हेंट्स
+// --- 3. QR & READY EVENTS ---
 client.on('qr', (qr) => { 
-    console.log('QR CODE RECEIVED: ', qr);
     qrcode.generate(qr, { small: true }); 
-    console.log('हा QR कोड तुमच्या WhatsApp मधून Link Device वर जाऊन स्कॅन करा.');
-});
-client.on('ready', () => { 
-    console.log('✅ Travel Bot आता ऑनलाइन आहे!'); 
+    console.log('QR Code generated. Scan it!');
 });
 
-// ==========================================================
-// 6. मुख्य मेसेज प्रोसेसिंग लॉजिक (Advanced Features)
-// ==========================================================
+client.on('ready', () => { 
+    console.log('✅ YatraBot is Online with ALL features!'); 
+});
+
+// --- 4. MAIN MESSAGE LOGIC ---
 client.on('message', async msg => {
     
-    // FIX: Scope आणि Stability साठी व्हेरिएबल सर्वात वर घोषित केले
     const userId = msg.from; 
     const userMessage = msg.body ? msg.body.trim() : '';
     const command = userMessage.toLowerCase().split(' ')[0];
 
-    // FIX: क्रॅश होण्यापासून वाचवण्यासाठी Try-Catch Shield
-   
-     try {
+    try {
         if (msg.isStatus || userMessage === '') return; 
 
-        // UX सुधारणा: 'टायपिंग' स्टेटस फंक्शन काढले (Deprecation Fix)
-        client.sendSeen(msg.from); 
+        // ---------------------------------------------------------
+        // PART A: तुमचे जुने फीचर्स (COMMANDS)
+        // ---------------------------------------------------------
 
-        // 6.1. मेनू आणि हेल्प कमांड
-        if (command === '!start' || command === '!menu' || command === '!help') {
-            userStates[userId] = null; 
-            if (geminiChatSessions[userId]) delete geminiChatSessions[userId]; 
-
-            const menuText = "नमस्ते! मी तुमचा प्रगत YatraBot.\n\n*कृपया खालील कमांड्स वापरा:\n\n1. *!guide [ठिकाण] : प्रवासाची माहिती आणि खर्च विचारा.\n2. !photo [कीवर्ड] : जगातील ठिकाणांचे फोटो शोधा.\n3. !weather [शहर] : त्या ठिकाणचे लाईव्ह हवामान.\n4. !save_plan : बॉटचे मागील उत्तर एका फाईलमध्ये सेव्ह करा.\n5. !new_chat : नवीन संभाषण सुरू करा (संदर्भ रीसेट).";
-            msg.reply(menuText);
-            return;
-        }
-        
-        // 6.2. नवीन संभाषण/सेशन सुरू करा
-        if (command === '!new_chat') {
-            if (geminiChatSessions[userId]) delete geminiChatSessions[userId];
-            msg.reply("✅ नवीन संभाषण सुरू झाले आहे. बॉट आता मागील गोष्टी विसरला आहे.");
-            return;
-        }
-
-        // 6.3. हवामान कमांड (OpenWeatherMap)
+        // 1. Weather (हवामान)
         if (command === '!weather') {
             const parts = userMessage.split(' ');
-            
-            // 🔥 FIX: शहराचे नाव दिले आहे की नाही, हे तपासा
-            if (parts.length < 2 || !parts[1]) {
-                msg.reply("कृपया शहराचे नाव सांगा. उदाहरणार्थ: !weather Pune");
-                return;
-            }
-            
-            const location = parts[1];
+            if (parts.length < 2) { msg.reply("शहराचे नाव सांगा. उदा: !weather Pune"); return; }
+            const city = parts[1];
             const apiKey = process.env.OPEN_WEATHER_API_KEY;
-            
-            if (!apiKey) {
-                 msg.reply("माफ करा, OpenWeatherMap API Key .env फाईलमध्ये सेट नाही.");
-                 return;
-            }
-            
-            // FIX: URL मध्ये location ला encode केले आहे (उत्तम)
-            const weatherUrl = `http://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${apiKey}&units=metric&lang=mr`;
-
             try {
-                const response = await axios.get(weatherUrl);
-                const data = response.data;
-                
-                // FIX: weatherReport ला लेट ने घोषित करा (किंवा const/var) आणि सुरुवात करा
-                let weatherReport = `📍 *${data.name}* येथील लाईव्ह हवामान:\n\n`;
-                weatherReport += `🌡 तापमान: ${data.main.temp}°C\n`;
-                weatherReport += `☁ स्थिती: ${data.weather[0].description}\n`;
-                weatherReport += `💧 आर्द्रता: ${data.main.humidity}%\n`;
-
-                msg.reply(weatherReport);
-            } catch (error) {
-                // HTTP 404 (Not Found) एररसाठी मेसेज
-                msg.reply(`माफ करा, '${location}' हे ठिकाण सापडले नाही.`);
-            }
+                const url = `http://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=mr`;
+                const res = await axios.get(url);
+                const data = res.data;
+                msg.reply(`📍 *${data.name}* हवामान:\n🌡 तापमान: ${data.main.temp}°C\n☁ स्थिती: ${data.weather[0].description}`);
+            } catch (e) { msg.reply("शहर सापडले नाही."); }
             return;
         }
-        
-        // 6.4. फोटो पाठवण्याची कमांड (Unsplash API)
-      // 6.4. फोटो पाठवण्याची कमांड (Unsplash API)
+
+        // 2. Photo (फोटो)
         if (command === '!photo') {
-            const parts = userMessage.split(' ');
-            const keyword = parts.slice(1).join(' '); 
+            const keyword = userMessage.replace('!photo', '').trim();
             const apiKey = process.env.UNSPLASH_ACCESS_KEY;
-            
-            // 🔥 FIX: कीवर्ड रिकामा आहे की नाही, हे तपासा
-            if (!keyword) {
-                msg.reply("कृपया फोटो कशाचा हवा आहे, हे सांगा. उदाहरणार्थ: !photo Paris Eiffel Tower");
-                return;
-            }
-            
-            if (!apiKey) {
-                msg.reply("माफ करा, UNSPLASH API Key .env फाईलमध्ये सेट नाही.");
-                return;
-            }
-
+            if (!keyword) { msg.reply("कशाचा फोटो हवा आहे? उदा: !photo Eiffel Tower"); return; }
             try {
-                // FIX: URL मध्ये keyword ला encode केले आहे (उत्तम)
-                const unsplashUrl = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&per_page=1&client_id=${apiKey}`;
-                const response = await axios.get(unsplashUrl);
-                const photoData = response.data.results;
-
-                if (photoData.length > 0) {
-                    const imageUrl = photoData[0].urls.regular; 
-                    const description = photoData[0].description || `जगभरातील फोटो: ${keyword}`;
-
-                    const media = await MessageMedia.fromUrl(imageUrl, { unsafeMime: true });
-                    
-                    await client.sendMessage(msg.from, media, { caption: description });
-                    
-                } else {
-                    msg.reply(`माफ करा, आम्हाला '${keyword}' साठी कोणताही फोटो मिळाला नाही.`);
-                }
-
-            } catch (error) {
-                console.error("Unsplash API Error:", error.message);
-                msg.reply("फोटो शोधताना नेटवर्क किंवा API मध्ये त्रुटी आली.");
-            }
+                const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&per_page=1&client_id=${apiKey}`;
+                const res = await axios.get(url);
+                if (res.data.results.length > 0) {
+                    const imgUrl = res.data.results[0].urls.regular;
+                    const media = await MessageMedia.fromUrl(imgUrl, { unsafeMime: true });
+                    await client.sendMessage(msg.from, media, { caption: `📸 ${keyword}` });
+                } else { msg.reply("फोटो मिळाला नाही."); }
+            } catch (e) { msg.reply("फोटो शोधताना एरर आला."); }
             return;
-}
-// नवीन कमांड लॉजिक
-if (command === '!pdf_plan') {
-    const parts = userMessage.split(' ');
-    const destination = parts.slice(1).join(' '); 
-
-    if (!destination) {
-        msg.reply("कृपया PDF मध्ये कोणत्या ठिकाणाची योजना हवी आहे, ते सांगा. उदा: !pdf_plan Goa");
-        return;
-    }
-
-    // 1. Gemini कडून तपशीलवार योजना मिळवा (फक्त टेक्स्ट)
-    let planText;
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash"});
-        const prompt = `You are a professional travel agent. Create a detailed 2-day travel itinerary for ${destination} focusing on transport and sightseeing. Format the output with clear headings and bullet points.`;
-        const result = await model.generateContent(prompt);
-        // result structure can vary depending on SDK; try common fields safely
-        planText = result?.text || result?.output?.[0]?.content?.[0]?.text || JSON.stringify(result);
-    } catch (e) {
-        msg.reply("माफ करा, Gemini AI कडून योजना मिळवण्यात अडचण आली.");
-        return;
-    }
-
-    // 2. PDF फाईल तयार करा आणि सेव्ह करा
-    const pdfFileName = `${destination.replace(/\s+/g, '_')}_TravelPlan_${Date.now()}.pdf`;
-    const doc = new PDFDocument();
-    
-    // फाईल सिस्टीममध्ये (Local Storage) फाईल लिहिणे सुरू करा
-    doc.pipe(fs.createWriteStream(pdfFileName)); 
-    
-    // PDF मध्ये डेटा भरा
-    doc.fontSize(20).text(`🌎 YatraBot - 2 Day Travel Plan: ${destination}`, { align: 'center' });
-    doc.moveDown(1.5);
-    doc.fontSize(10).text(planText, { align: 'left', lineGap: 4 });
-    doc.end(); // फाईल लिहायला पूर्ण करा
-
-    // 3. WhatsApp वर PDF पाठवा
-    
-    // फाईल तयार होईपर्यंत थांबा (2 सेकंद)
-    await new Promise(resolve => setTimeout(resolve, 2000)); 
-
-    try {
-        const media = MessageMedia.fromFilePath(pdfFileName);
-        await client.sendMessage(msg.from, media, { caption: `✅ ${destination} ठिकाणाची योजना PDF मध्ये तयार आहे!` });
-        
-        // फाईल पाठवल्यानंतर लोकल सिस्टीममधून डिलीट करा (सिस्टम स्वच्छ ठेवण्यासाठी)
-        fs.unlinkSync(pdfFileName); 
-
-    } catch(e) {
-        console.error("PDF Send Error:", e);
-        msg.reply("PDF तयार झाली, पण WhatsApp वर पाठवताना त्रुटी आली.");
-    }
-    
-    return;
-}
-        
-        // 6.5. योजना सेव्ह करा
-        if (command === '!save_plan') {
-             const chat = geminiChatSessions[userId];
-             if (!chat) {
-                 msg.reply("सेव्ह करण्यासाठी कोणतेही सक्रिय संभाषण नाही.");
-                 return;
-             }
-             const history = await chat.getHistory();
-             const lastResponse = history[history.length - 1].parts[0].text;
-             const filename = `itinerary_${userId.replace('@c.us', '')}.txt`;
-             fs.writeFileSync(filename, `योजना सेव केलेली तारीख: ${new Date().toLocaleString()}\n\n---\n${lastResponse}`);
-             msg.reply(`✅ तुमची योजना *${filename}* या नावाने बॉट फोल्डरमध्ये सेव्ह केली आहे!`);
-             return;
         }
 
-        // 6.6. Gemini Chat Session (संभाषणाचा संदर्भ आणि स्मार्ट फीचर्स)
+        // 3. PDF Plan (Trip PDF)
+        if (command === '!pdf_plan') {
+            const dest = userMessage.replace('!pdf_plan', '').trim();
+            if (!dest) { msg.reply("ठिकाण सांगा. उदा: !pdf_plan Goa"); return; }
+            
+            msg.reply("📄 PDF तयार करत आहे, कृपया थांबा...");
+            
+            // AI कडून प्लॅन घेणे
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash"});
+            const result = await model.generateContent(`Create a 2-day itinerary for ${dest}. Keep it short.`);
+            const planText = result.response.text();
+
+            // PDF बनवणे
+            const doc = new PDFDocument();
+            const fileName = `Plan_${Date.now()}.pdf`;
+            doc.pipe(fs.createWriteStream(fileName));
+            doc.fontSize(18).text(`Travel Plan: ${dest}`, { align: 'center' });
+            doc.moveDown();
+            doc.fontSize(12).text(planText);
+            doc.end();
+
+            // 2 सेकंद थांबून पाठवणे
+            setTimeout(async () => {
+                const media = MessageMedia.fromFilePath(fileName);
+                await client.sendMessage(msg.from, media, { caption: "✅ तुमची ट्रिप प्लॅन PDF!" });
+                fs.unlinkSync(fileName); // फाईल डिलीट करा
+            }, 3000);
+            return;
+        }
+
+        // 4. Reset / Help
+        if (command === '!new_chat' || command === '!reset') {
+            delete geminiChatSessions[userId];
+            msg.reply("🔄 चॅट रिसेट झाले आहे. विचारा, तुम्हाला कुठे जायचे आहे?");
+            return;
+        }
+
+        // ---------------------------------------------------------
+        // PART B: नवीन स्मार्ट फिचर्स (GEMINI CHAT + LINKS)
+        // ---------------------------------------------------------
         
-        // 1. आजची तारीख आणि वार (Dynamic Date)
+        // 1. आजची तारीख (Real-time)
         const today = new Date().toLocaleString("en-IN", { 
-            timeZone: "Asia/Kolkata", 
-            dateStyle: "full", 
-            timeStyle: "short" 
+            timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "short" 
         });
 
-        // 2. नवीन स्मार्ट नियम (No API - Google Links)
-        const smartRules = `
-        --- LIVE DATA CONTEXT ---
-        Current Date & Time in India: ${today}.
-        IMPORTANT: 
-        - Always answer knowing that today is ${today}.
-        - If checking for trains/flights, use this Day/Date to assume availability based on standard schedules.
+        // 2. स्मार्ट प्रॉम्प्ट (Sandwich Method)
+        // यात "जुना स्वभाव" (YatraBot) आणि "नवीन लिंक्स" (RedBus/Google) दोन्ही आहेत.
+        const smartSystemPrompt = `
+        You are 'YatraBot', an advanced Travel Assistant.
+        CURRENT DATE IN INDIA: ${today}.
         
-        --- SMART LINKS (NO API MODE) ---
-        Since you don't have live API access for Real-time Tracking or Exact Prices:
-        1. If User asks for "Live Status", "Where is my train", or "PNR":
-           Generate this Google Link: [🔴 Check Live Status Here](https://www.google.com/search?q=train+live+status+${encodeURIComponent(userMessage)})
+        YOUR TASK: Help user with travel plans, standard timetables, and generation of LIVE LINKS.
+
+        ### RULES (NO API MODE):
         
-        2. If User asks for "Flight Price" or "Ticket Booking":
-           Generate this Link: [✈ Check Prices on Google](https://www.google.com/search?q=flight+ticket+booking+${encodeURIComponent(userMessage)})
-           
-        3. For everything else, use your standard "Travel Agent" knowledge defined in system instructions.
-        -------------------------
-        User Query: 
+        1. *🚌 BUSES:*
+           - Suggest operators (MSRTC, Neeta, etc.) and general frequency.
+           - *ALWAYS* give this RedBus Link:
+             "🚌 Check Live Seats: [View on RedBus](https://www.redbus.in/bus-tickets/search?fromCity=Source&toCity=Destination)"
+             (Try to replace Source/Destination in link if specific cities mentioned)
+
+        2. *🚂 TRAINS:*
+           - Provide standard train names/times from your database.
+           - *ALWAYS* give this Google Link for Live Status:
+             "🚂 Track Live Status: [Click Here](https://www.google.com/search?q=train+status+${encodeURIComponent(userMessage)})"
+
+        3. *✈ FLIGHTS:*
+           - Suggest airlines.
+           - *ALWAYS* give Google Flights Link:
+             "✈ Check Prices: [View Flights](https://www.google.com/search?q=flights+${encodeURIComponent(userMessage)})"
+
+        4. *GENERAL:*
+           - If user talks casually (Hi, Hello), be polite.
+           - Answer in the language user asked (Marathi/English).
+        
+        User Query: ${userMessage}
         `;
 
-        // 3. चॅट सेशन सुरू करा (जर नसेल तर)
+        // 3. चॅट सेशन हँडलिंग
         if (!geminiChatSessions[userId]) {
-            const model = genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash", // मॉडेलचे नाव
-                systemInstruction: systemInstruction // तुमचे जुने फीचर्स (Section 4 मधून) इथे आपोआप लोड होतील
-            });
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
             geminiChatSessions[userId] = model.startChat();
         }
-        
-                try {
-                    const chat = geminiChatSessions[userId];
-                    
-                    // 4. सँडविच तयार करा: (स्मार्ट नियम + युजरचा मेसेज)
-                    const finalMessage = smartRules + userMessage;
-        
-                    const result = await chat.sendMessage(finalMessage); 
-                    // Safely handle different SDK response shapes
-                    msg.reply(result?.response?.text ? result.response.text() : (result?.text || JSON.stringify(result)));
-        
-                } catch (error) {
-                    console.error("Chat Session Error:", error);
-                    // जुने सेशन डिलीट करा म्हणजे एरर लूपमध्ये अडकणार नाही
-                    delete geminiChatSessions[userId];
-                    msg.reply("संभाषणात थोडी अडचण आली. कृपया पुन्हा प्रयत्न करा.");
-                }
-        
-            } catch (err) {
-                msg.reply("Error Details: " + err.message);
-                // Ensure session reset to avoid loops
-                delete geminiChatSessions[userId];
-            }
-        }); 
-        
-        // स्टार्ट करा: WhatsApp क्लायंट इनिशियलाइझ करा
-        client.initialize();
+
+        const chat = geminiChatSessions[userId];
+        const result = await chat.sendMessage(smartSystemPrompt);
+        const response = result.response.text();
+
+        await msg.reply(response);
+
+    } catch (error) {
+        console.error("Error:", error);
+        // आता बॉट एरर लपवणार नाही, तुम्हाला सांगेल
+        msg.reply("⚠ Technical Error: " + error.message);
+    }
+});
+
+client.initialize();
