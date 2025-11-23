@@ -1,24 +1,28 @@
 // ==========================================================
-// YATRA BOT - FINAL SUPER VERSION
-// Features: PDF, Weather, Photos + Smart Tables + Delay Links
+// YATRA BOT - FINAL MASTER MIXED VERSION
+// Features included:
+// 1. Detailed Travel Info (Text + Tables + Links)
+// 2. Weather (!weather)
+// 3. Photos (!photo)
+// 4. PDF Plans (!pdf_plan)
 // ==========================================================
 
 require('dotenv').config();
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const axios = require('axios'); 
+const axios = require('axios'); // Weather & Photos साठी
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const PDFDocument = require('pdfkit'); 
 const express = require('express');
 
-// --- 1. SERVER SETUP (Render Uptime) ---
+// --- 1. SERVER SETUP (For 24/7 Uptime) ---
 const app = express();
 const port = process.env.PORT || 3000;
-app.get('/', (req, res) => res.send("YatraBot is Live with Smart Tables!"));
+app.get('/', (req, res) => res.send("YatraBot Master Version is Live!"));
 app.listen(port, () => console.log(`Server running on port ${port}`));
 
-// --- 2. SETUP CLIENT & AI ---
+// --- 2. CLIENT & AI SETUP ---
 const client = new Client({ 
     authStrategy: new LocalAuth(),
     puppeteer: { args: ['--no-sandbox'] }
@@ -27,17 +31,17 @@ const client = new Client({
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY); 
 const geminiChatSessions = {};          
 
-// --- 3. EVENTS ---
+// --- 3. BASIC EVENTS ---
 client.on('qr', (qr) => { 
     qrcode.generate(qr, { small: true }); 
     console.log('QR Code generated. Scan it!');
 });
 
 client.on('ready', () => { 
-    console.log('✅ YatraBot is Online!'); 
+    console.log('✅ YatraBot is Online with ALL Features!'); 
 });
 
-// --- 4. MAIN LOGIC ---
+// --- 4. MAIN MESSAGE LOGIC ---
 client.on('message', async msg => {
     
     const userId = msg.from; 
@@ -47,123 +51,127 @@ client.on('message', async msg => {
     try {
         if (msg.isStatus || userMessage === '') return; 
 
-        // --- PART A: जुने फीचर्स (COMMANDS) ---
+        // =========================================================
+        // PART A: OLD FEATURES (जुने फीचर्स)
+        // =========================================================
 
-        // 1. Weather
+        // 1. Weather (हवामान)
         if (command === '!weather') {
-            const parts = userMessage.split(' ');
-            if (parts.length < 2) { msg.reply("शहराचे नाव सांगा. उदा: !weather Pune"); return; }
-            const city = parts[1];
+            const city = userMessage.split(' ')[1];
+            if (!city) { msg.reply("Please mention city name. Ex: !weather Pune"); return; }
             const apiKey = process.env.OPEN_WEATHER_API_KEY;
             try {
-                const url = `http://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=mr`;
+                const url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
                 const res = await axios.get(url);
-                const data = res.data;
-                msg.reply(`📍 *${data.name}* हवामान:\n🌡 तापमान: ${data.main.temp}°C\n☁ स्थिती: ${data.weather[0].description}`);
-            } catch (e) { msg.reply("शहर सापडले नाही."); }
+                const d = res.data;
+                msg.reply(`📍 *${d.name} Weather:*\n🌡 Temp: ${d.main.temp}°C\n☁ Condition: ${d.weather[0].description}\n💨 Wind: ${d.wind.speed} m/s`);
+            } catch (e) { msg.reply("City not found or API Error."); }
             return;
         }
 
-        // 2. Photo
+        // 2. Photos (फोटो)
         if (command === '!photo') {
-            const keyword = userMessage.replace('!photo', '').trim();
+            const key = userMessage.replace('!photo', '').trim();
+            if (!key) { msg.reply("What photo do you want? Ex: !photo Goa Beach"); return; }
             const apiKey = process.env.UNSPLASH_ACCESS_KEY;
-            if (!keyword) { msg.reply("कशाचा फोटो हवा आहे? उदा: !photo Taj Mahal"); return; }
             try {
-                const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&per_page=1&client_id=${apiKey}`;
+                const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(key)}&per_page=1&client_id=${apiKey}`;
                 const res = await axios.get(url);
                 if (res.data.results.length > 0) {
                     const imgUrl = res.data.results[0].urls.regular;
                     const media = await MessageMedia.fromUrl(imgUrl, { unsafeMime: true });
-                    await client.sendMessage(msg.from, media, { caption: `📸 ${keyword}` });
-                } else { msg.reply("फोटो मिळाला नाही."); }
-            } catch (e) { msg.reply("फोटो शोधताना एरर आला."); }
+                    await client.sendMessage(msg.from, media, { caption: `📸 Here is a photo of ${key}` });
+                } else { msg.reply("No photo found."); }
+            } catch (e) { msg.reply("Error fetching photo."); }
             return;
         }
 
-        // 3. PDF Plan
+        // 3. PDF Plan (ट्रिप प्लॅन PDF)
         if (command === '!pdf_plan') {
             const dest = userMessage.replace('!pdf_plan', '').trim();
-            if (!dest) { msg.reply("ठिकाण सांगा. उदा: !pdf_plan Goa"); return; }
-            msg.reply("📄 PDF तयार करत आहे...");
+            if (!dest) { msg.reply("Destination? Ex: !pdf_plan Dubai"); return; }
+            msg.reply("📄 Generating PDF Plan... Please wait.");
             
+            // Get Plan from AI
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash"});
-            const result = await model.generateContent(`Create a 2-day itinerary for ${dest}. Keep it short.`);
-            const planText = result.response.text();
+            const aiRes = await model.generateContent(`Create a short 2-day itinerary for ${dest}.`);
+            const text = aiRes.response.text();
 
+            // Create PDF
             const doc = new PDFDocument();
             const fileName = `Plan_${Date.now()}.pdf`;
             doc.pipe(fs.createWriteStream(fileName));
-            doc.fontSize(18).text(`Travel Plan: ${dest}`, { align: 'center' });
+            doc.fontSize(20).text(`Trip to ${dest}`, { align: 'center' });
             doc.moveDown();
-            doc.fontSize(12).text(planText);
+            doc.fontSize(12).text(text);
             doc.end();
 
+            // Send PDF
             setTimeout(async () => {
                 const media = MessageMedia.fromFilePath(fileName);
-                await client.sendMessage(msg.from, media, { caption: "✅ तुमची ट्रिप प्लॅन PDF!" });
-                fs.unlinkSync(fileName);
+                await client.sendMessage(msg.from, media, { caption: "✅ Your Travel Plan PDF" });
+                fs.unlinkSync(fileName); // Clean up
             }, 3000);
             return;
         }
 
+        // 4. Reset (!new_chat)
         if (command === '!reset' || command === '!new_chat') {
             delete geminiChatSessions[userId];
-            msg.reply("🔄 चॅट रिसेट झाले आहे.");
+            msg.reply("🔄 Chat Reset! नमस्कार, मी तुमचा YatraBot. सांगा आज कुठे जायचे आहे?");
             return;
         }
 
-        // --- PART B: नवीन हायब्रीड फीचर्स (CHAT + TABLES + LINKS) ---
+        // =========================================================
+        // PART B: NEW HYBRID TRAVEL FEATURES (नवीन मिक्स फीचर्स)
+        // (Detailed Info + Tables + Smart Links)
+        // =========================================================
         
         // आजची तारीख
-        const today = new Date().toLocaleString("en-IN", { 
-            timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "short" 
-        });
+        const today = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "short" });
 
-        // 🔥 हा आहे तुमचा "जुगाड" प्रॉम्प्ट (Table + Link)
+        // 🔥 हा प्रॉम्प्ट तुमच्या 'स्क्रीनशॉट' सारखा हुशार आहे 🔥
         const smartSystemPrompt = `
-        You are 'YatraBot', a Smart Travel Assistant.
-        CURRENT DATE IN INDIA: ${today}.
+        You are 'YatraBot', an Expert Travel Consultant.
+        CURRENT DATE: ${today}.
         
-        INSTRUCTIONS:
-        User wants detailed info INSIDE the chat, with a Live Status link ONLY at the end.
-
-        1. *🚂 FOR TRAINS:*
-           - First, list trains with Standard Timings in a list/table format.
-           - Format:
-             "🚂 Train Schedule (Standard)
-             --------------------------------
-             1. Train Name (Number)
-                🕒 Dep: HH:MM AM | Arr: HH:MM PM
-                🎫 Days: Daily / Mon, Tue..
-             --------------------------------"
-           - *AT THE END (Mandatory):*
-             "⚠ Note: ट्रेन लेट किंवा कॅन्सल आहे का, हे पाहण्यासाठी खाली क्लिक करा:
-             🔴 [Check Live Delay/Status](https://www.google.com/search?q=live+train+status+${encodeURIComponent(userMessage)})"
-
-        2. *🚌 FOR BUSES:*
-           - Show a Text Table for options.
-           - Format:
-             "🚌 Bus Options (Approx)
-             --------------------------------
-             | Operator | Time | Est. Price |
-             |----------|------|------------|
-             | MSRTC    | 06:00| ₹350+      |
-             | Neeta    | 08:30| ₹600+      |
-             --------------------------------
-             Frequency: Every 30-60 mins."
-           - *AT THE END:*
-             "🎟 Book Seats: [View on RedBus](https://www.redbus.in/bus-tickets/search?fromCity=Source&toCity=Destination)"
-
-        3. *✈ FOR FLIGHTS:*
-           - List Airlines & Estimated Price.
-           - *AT THE END:* "💰 Real-Time Price: [Google Flights](https://www.google.com/search?q=flights+${encodeURIComponent(userMessage)})"
-
-        4. *General:* Polite and helpful in User's Language.
+        USER QUERY: "${userMessage}"
         
-        User Query: ${userMessage}
+        ### INSTRUCTIONS:
+        The user wants a "Consultant-like" experience. 
+        1. First, explain the route nicely (Distance, Best mode).
+        2. Then, provide structured TABLES for Buses/Trains.
+        3. Finally, give Google/RedBus LINKS for Live Status.
+
+        ### FORMAT YOUR RESPONSE LIKE THIS:
+
+        *👋 Introduction:*
+        (Explain the route, distance, and best options like a human expert. E.g., "Nashik to Goa is a long journey...")
+
+        *🚌 By Bus:*
+        (Explain operators and comfort).
+        | Operator | Time | Approx Price |
+        |---|---|---|
+        | (Name) | (Time) | (Price) |
+        
+        🎟 Book Seats: [View on RedBus](https://www.redbus.in/bus-tickets/search?fromCity=Source&toCity=Destination)
+
+        *🚂 By Train:*
+        (Explain train availability, e.g., "Direct trains are limited...").
+        | Train Name | Dep | Arr |
+        |---|---|---|
+        | (Name) | (Time) | (Time) |
+        
+        ⚠ Check Live Status: 🔴 [Track Train Here](https://www.google.com/search?q=live+train+status+${encodeURIComponent(userMessage)})
+
+        *✈ By Flight:*
+        (Explain airports).
+        💰 Check Prices: 👉 [Google Flights](https://www.google.com/search?q=flights+${encodeURIComponent(userMessage)})
+
+        (Answer in the language user used: Marathi/English).
         `;
 
+        // AI Chat Handling
         if (!geminiChatSessions[userId]) {
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
             geminiChatSessions[userId] = model.startChat();
@@ -173,6 +181,7 @@ client.on('message', async msg => {
         const result = await chat.sendMessage(smartSystemPrompt);
         const response = result.response.text();
 
+        // Send Final Reply
         await msg.reply(response);
 
     } catch (error) {
